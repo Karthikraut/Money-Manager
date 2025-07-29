@@ -12,10 +12,12 @@ import com.karthik.moneymanager.repository.ProfileRepository;
 public class ProfileService {
 
     private final ProfileRepository profileRepository;
+    private final EmailService emailService;
 
     // ✅ Constructor injection (best practice)
-    public ProfileService(ProfileRepository profileRepository) {
+    public ProfileService(ProfileRepository profileRepository, EmailService emailService) {
         this.profileRepository = profileRepository;
+        this.emailService = emailService;
     }
 
     // ✅ registerUser method
@@ -23,6 +25,13 @@ public class ProfileService {
         ProfileEntity newProfile = toEntity(profileDTO);
         newProfile.setActivationToken(UUID.randomUUID().toString());
         newProfile = profileRepository.save(newProfile);
+
+        //SEND ACTIVATION EMAIL
+        String activationLink = "http://localhost:8080/api/v1/activate?token=" + newProfile.getActivationToken();
+        String subject = "Activate your Money Manager account";
+        String body = "Click the link to activate your account: " + activationLink;
+
+        emailService.sendEmail(newProfile.getEmail(), subject, body);
         return toDTO(newProfile);
     }
 
