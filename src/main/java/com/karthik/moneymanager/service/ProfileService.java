@@ -1,7 +1,9 @@
 package com.karthik.moneymanager.service;
 
+
 import java.util.UUID;
 
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.karthik.moneymanager.dto.ProfileDTO;
@@ -13,19 +15,21 @@ public class ProfileService {
 
     private final ProfileRepository profileRepository;
     private final EmailService emailService;
+    private final PasswordEncoder passwordEncoder;
 
     // ✅ Constructor injection (best practice)
-    public ProfileService(ProfileRepository profileRepository, EmailService emailService) {
+    public ProfileService(ProfileRepository profileRepository, EmailService emailService, PasswordEncoder passwordEncoder) {
         this.profileRepository = profileRepository;
         this.emailService = emailService;
+        this.passwordEncoder = passwordEncoder;
     }
 
     // ✅ registerUser method
     public ProfileDTO registerUser(ProfileDTO profileDTO) {
         ProfileEntity newProfile = toEntity(profileDTO);
         newProfile.setActivationToken(UUID.randomUUID().toString());
+        
         newProfile = profileRepository.save(newProfile);
-
         //SEND ACTIVATION EMAIL
         String activationLink = "http://localhost:8080/api/v1/activate?token=" + newProfile.getActivationToken();
         String subject = "Activate your Money Manager account";
@@ -41,7 +45,7 @@ public class ProfileService {
                 .id(profileDTO.getId())
                 .fullName(profileDTO.getFullName())
                 .email(profileDTO.getEmail())
-                .password(profileDTO.getPassword())
+                .password(passwordEncoder.encode(profileDTO.getPassword()))
                 .profileImageUrl(profileDTO.getProfileImageUrl())
                 .createdAt(profileDTO.getCreatedAt())
                 .updatedAt(profileDTO.getUpdatedAt())
@@ -59,4 +63,19 @@ public class ProfileService {
                 .updatedAt(profileEntity.getUpdatedAt())
                 .build();
     }
+
+    public boolean activateProfile(String activationToken) {
+        return profileRepository.findByActivationToken(activationToken)
+                .map(
+                    profile->{
+                        profile.setIsActive(true);
+                        profile.setActivationToken(null); // Clear the token after activation
+                        profileRepository.save(profile);
+                        return true;
+                    }
+                )
+                    .orElse(false);
+    }
+
+
 }
