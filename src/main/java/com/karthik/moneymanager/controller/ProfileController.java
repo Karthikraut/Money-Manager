@@ -1,10 +1,13 @@
 package com.karthik.moneymanager.controller;
 
+import java.util.Map;
+
 import org.apache.catalina.connector.Response;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import com.karthik.moneymanager.dto.AuthDto;
 import com.karthik.moneymanager.dto.ProfileDTO;
 import com.karthik.moneymanager.service.ProfileService;
 
@@ -31,5 +34,19 @@ public class ProfileController {
         } else {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Activation token not found or already used.");
         }
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<Map<String, Object>> login(@RequestBody AuthDto authDto) {
+        try {
+           if(!profileService.isAccountActive(authDto.getEmail())) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Account is not active"));
+            } 
+            Map<String,Object> response = profileService.authenticateAndGenerateToken(authDto);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", e.getMessage()));
+        }
+        
     }
 }

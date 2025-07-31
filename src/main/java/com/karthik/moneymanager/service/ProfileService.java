@@ -1,14 +1,22 @@
 package com.karthik.moneymanager.service;
 
 
+import java.util.Map;
 import java.util.UUID;
 
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import com.karthik.moneymanager.dto.AuthDto;
 import com.karthik.moneymanager.dto.ProfileDTO;
 import com.karthik.moneymanager.entity.ProfileEntity;
 import com.karthik.moneymanager.repository.ProfileRepository;
+
 
 @Service
 public class ProfileService {
@@ -16,12 +24,14 @@ public class ProfileService {
     private final ProfileRepository profileRepository;
     private final EmailService emailService;
     private final PasswordEncoder passwordEncoder;
+    private final AuthenticationManager authenticationManager;
 
     // ✅ Constructor injection (best practice)
-    public ProfileService(ProfileRepository profileRepository, EmailService emailService, PasswordEncoder passwordEncoder) {
+    public ProfileService(ProfileRepository profileRepository, EmailService emailService, PasswordEncoder passwordEncoder,AuthenticationManager authenticationManager) {
         this.profileRepository = profileRepository;
         this.emailService = emailService;
         this.passwordEncoder = passwordEncoder;
+        this.authenticationManager = authenticationManager;
     }
 
     // ✅ registerUser method
@@ -77,5 +87,48 @@ public class ProfileService {
                     .orElse(false);
     }
 
+    public boolean isAccountActive(String email) {
+        return profileRepository.findByEmail(email)
+                .map(ProfileEntity::getIsActive)
+                .orElse(false);
+    }
+    
+    public ProfileEntity getCurrentProfile(){
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String email = authentication.getName();
+        return profileRepository.findByEmail(email)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + email));
+    }
 
+    public ProfileDTO getPublicProfile(String email) {
+        ProfileEntity currentUser = null;
+        if(email==null){
+            currentUser = getCurrentProfile();
+        } else {
+            currentUser = profileRepository.findByEmail(email)
+                    .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + email));
+        }
+        
+        return ProfileDTO.builder()
+                .id(currentUser.getId())
+                .fullName(currentUser.getFullName())
+                .email(currentUser.getEmail())
+                .profileImageUrl(currentUser.getProfileImageUrl())
+                .createdAt(currentUser.getCreatedAt())
+                .updatedAt(currentUser.getUpdatedAt())
+                .build();
+    }
+
+    public Map<String, Object> authenticateAndGenerateToken(AuthDto authDto) {
+        try {
+            authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(authDto.getEmail(),authDto.getPassword()));
+            return Map.of(
+                "token", "JWT token",
+                "user", getPublicProfile(authDto.getEmail())
+            );
+        } catch (Exception e) {
+            // TODO: handle exception
+            throw new RuntimeException("Invalide email or Password");
+        }
+    }
 }
