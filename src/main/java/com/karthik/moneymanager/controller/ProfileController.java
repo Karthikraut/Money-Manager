@@ -2,7 +2,6 @@ package com.karthik.moneymanager.controller;
 
 import java.util.Map;
 
-import org.apache.catalina.connector.Response;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -48,5 +47,10 @@ public class ProfileController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", e.getMessage()));
         }
         
+    }
+
+    @GetMapping("/test")
+    public String test(){
+        return "ProfileController is working!";
     }
 }

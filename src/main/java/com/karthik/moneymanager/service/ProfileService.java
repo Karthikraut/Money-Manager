@@ -16,29 +16,29 @@ import com.karthik.moneymanager.dto.AuthDto;
 import com.karthik.moneymanager.dto.ProfileDTO;
 import com.karthik.moneymanager.entity.ProfileEntity;
 import com.karthik.moneymanager.repository.ProfileRepository;
+import com.karthik.moneymanager.util.Jwtutil;
+
+import lombok.RequiredArgsConstructor;
 
 
 @Service
+@RequiredArgsConstructor
 public class ProfileService {
 
     private final ProfileRepository profileRepository;
     private final EmailService emailService;
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
+    private final Jwtutil jwtutil;
 
-    // ✅ Constructor injection (best practice)
-    public ProfileService(ProfileRepository profileRepository, EmailService emailService, PasswordEncoder passwordEncoder,AuthenticationManager authenticationManager) {
-        this.profileRepository = profileRepository;
-        this.emailService = emailService;
-        this.passwordEncoder = passwordEncoder;
-        this.authenticationManager = authenticationManager;
-    }
+   
 
     // ✅ registerUser method
     public ProfileDTO registerUser(ProfileDTO profileDTO) {
         ProfileEntity newProfile = toEntity(profileDTO);
         newProfile.setActivationToken(UUID.randomUUID().toString());
         
+
         newProfile = profileRepository.save(newProfile);
         //SEND ACTIVATION EMAIL
         String activationLink = "http://localhost:8080/api/v1/activate?token=" + newProfile.getActivationToken();
@@ -122,8 +122,9 @@ public class ProfileService {
     public Map<String, Object> authenticateAndGenerateToken(AuthDto authDto) {
         try {
             authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(authDto.getEmail(),authDto.getPassword()));
+            String token = jwtutil.generateToken(authDto.getEmail());
             return Map.of(
-                "token", "JWT token",
+                "token", token,
                 "user", getPublicProfile(authDto.getEmail())
             );
         } catch (Exception e) {

@@ -4,26 +4,23 @@ import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.stereotype.Service;
 
 import com.karthik.moneymanager.entity.ProfileEntity;
 import com.karthik.moneymanager.repository.ProfileRepository;
 
+import lombok.AllArgsConstructor;
 
 import java.util.Collections;
 
 @Service
+@AllArgsConstructor
 public class AppUserDetailsService implements UserDetailsService {
 
     private final ProfileRepository profileRepository;
-    private final PasswordEncoder passwordEncoder;
-
-    public AppUserDetailsService(ProfileRepository profileRepository, PasswordEncoder passwordEncoder) {
-        this.profileRepository = profileRepository;
-        this.passwordEncoder = passwordEncoder;
-    }
+   
+   
 
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {

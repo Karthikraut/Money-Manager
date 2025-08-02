@@ -5,6 +5,7 @@ import java.util.List;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -13,9 +14,13 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import com.karthik.moneymanager.security.JwtRequestFilter;
+import com.karthik.moneymanager.service.AppUserDetailsService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -23,6 +28,9 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor // ✅ Generates a constructor for final fields (not used here but useful)
 public class SecurityConfig {
     
+    private final AppUserDetailsService appUserDetailsService ;
+    private final JwtRequestFilter jwtRequestFilter;
+
     @Bean // ✅ This method defines a bean for the application's security filter chain
     public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
         
@@ -46,7 +54,7 @@ public class SecurityConfig {
          * - Any other request -> must be authenticated (user must provide valid token or credentials)
          */
         .authorizeHttpRequests(auth -> auth
-            .requestMatchers("/login", "/status","/register","/health").permitAll()
+            .requestMatchers("/login", "/status","/register","/health","/activate").permitAll()
             .anyRequest().authenticated())
         
         /*
@@ -56,13 +64,14 @@ public class SecurityConfig {
          *   This is best practice for REST APIs.
          */
         .sessionManagement(session -> session
-            .sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+            .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
         /*
          * 5️⃣ Build the Security Filter Chain
          * - After configuring all security rules, we build the filter chain
          *   which Spring Security will use to secure incoming HTTP requests.
          */
+        .addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);
         return httpSecurity.build();
     }
 
@@ -87,7 +96,9 @@ public class SecurityConfig {
     @Bean
     public AuthenticationManager authenticationManager(){
         DaoAuthenticationProvider authenticationProvider = new DaoAuthenticationProvider();
-        authenticationProvider.setUserDetailsService(appUserDeta);
+        authenticationProvider.setUserDetailsService(appUserDetailsService);
+        authenticationProvider.setPasswordEncoder(passwordEncoder());
+        return new ProviderManager(authenticationProvider);
 
     }
 }
