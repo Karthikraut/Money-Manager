@@ -14,6 +14,7 @@ import com.karthik.moneymanager.entity.IncomeEntity;
 import com.karthik.moneymanager.entity.ProfileEntity;
 import com.karthik.moneymanager.repository.CategoryRepository;
 import com.karthik.moneymanager.repository.IncomeRepository;
+import org.springframework.data.domain.Sort;
 
 import lombok.RequiredArgsConstructor;
 
@@ -78,6 +79,15 @@ public class IncomeService {
         return totalIncome != null ? totalIncome : BigDecimal.ZERO;
     }
 
+
+     //Filter Incomes
+    public List<IncomeDTO> filterIncome(LocalDate startDate, LocalDate endDate, String keyword, Sort sort) {
+        ProfileEntity profile = profileService.getCurrentProfile();
+        List<IncomeEntity> list = incomeRepository.findByProfileIdAndDateBetweenAndNameContainingIgnoreCase(profile.getId(), startDate, endDate, keyword, sort);
+        return list.stream()
+                .map(this::toDTO)
+                .toList();
+    }
 
     // Convert IncomeDTO to IncomeEntity
     private IncomeEntity toEntity(IncomeDTO incomeDTO, ProfileEntity profile, CategoryEntity category) {
