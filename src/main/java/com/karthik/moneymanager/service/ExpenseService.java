@@ -1,6 +1,9 @@
 package com.karthik.moneymanager.service;
 
-import java.util.Optional;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.List;
+
 
 import org.springframework.stereotype.Service;
 
@@ -31,6 +34,46 @@ public class ExpenseService {
         newExpense = expenseRepository.save(newExpense);
 
         return toDTO(newExpense);
+    }
+
+    //Retrives all expenses for the current profile for current month
+    public List<ExpenseDTO> getCurrentMonthExpensesForCurrentUser(){
+        ProfileEntity profile = profileService.getCurrentProfile();
+        LocalDate now = LocalDate.now();
+        LocalDate startOfMonth = now.withDayOfMonth(1);
+        LocalDate endOfMonth = now.withDayOfMonth(now.lengthOfMonth());
+        List<ExpenseEntity> list = expenseRepository.findByProfileIdAndDateBetween(profile.getId(), startOfMonth, endOfMonth);
+        return list.stream()
+                .map(this::toDTO)
+                .toList();
+    }
+
+    //Delete expense by id for current user
+    public void deleteExpense(Long expenseId) {
+        ProfileEntity profile = profileService.getCurrentProfile();
+        ExpenseEntity expense = expenseRepository.findById(expenseId)
+                .orElseThrow(() -> new IllegalArgumentException("Expense not found"));
+        if(!expense.getProfile().getId().equals(profile.getId())) {
+            throw new IllegalArgumentException("Expense does not belong to the current user");
+        }
+
+        expenseRepository.deleteById(expenseId);
+
+    }
+
+    //Get latest 5 expenses for the current user
+    public List<ExpenseDTO> getLatest5ExpensesForCurrentUser() {
+        ProfileEntity profile = profileService.getCurrentProfile();
+        List<ExpenseEntity> list = expenseRepository.findTop5ByProfileIdOrderByDateDesc(profile.getId());
+        return list.stream()
+                .map(this::toDTO)
+                .toList();
+    }
+
+    public BigDecimal getTotalExpenseForCurrentUser() {
+        ProfileEntity profile = profileService.getCurrentProfile();
+        BigDecimal totalExpense = expenseRepository.findTotalExpenseByProfileId(profile.getId());
+        return totalExpense != null ? totalExpense : BigDecimal.ZERO;
     }
 
     private ExpenseEntity toEntity(ExpenseDTO expenseDto, ProfileEntity profile, CategoryEntity category) {
