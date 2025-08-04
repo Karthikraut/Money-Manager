@@ -35,6 +35,7 @@ public class ProfileService {
 
     // ✅ registerUser method
     public ProfileDTO registerUser(ProfileDTO profileDTO) {
+       
         ProfileEntity newProfile = toEntity(profileDTO);
         newProfile.setActivationToken(UUID.randomUUID().toString());
         

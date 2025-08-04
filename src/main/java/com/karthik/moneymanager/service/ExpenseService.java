@@ -13,6 +13,10 @@ import com.karthik.moneymanager.entity.ExpenseEntity;
 import com.karthik.moneymanager.entity.ProfileEntity;
 import com.karthik.moneymanager.repository.CategoryRepository;
 import com.karthik.moneymanager.repository.ExpenseRepository;
+
+import org.springframework.transaction.annotation.Transactional;
+
+
 import org.springframework.data.domain.Sort;
 import lombok.RequiredArgsConstructor;
 
@@ -70,6 +74,7 @@ public class ExpenseService {
                 .toList();
     }
 
+    //Get total expense for current user
     public BigDecimal getTotalExpenseForCurrentUser() {
         ProfileEntity profile = profileService.getCurrentProfile();
         BigDecimal totalExpense = expenseRepository.findTotalExpenseByProfileId(profile.getId());
@@ -85,6 +90,16 @@ public class ExpenseService {
                 .toList();
     }
 
+    //Notify the user about the expense
+    @Transactional(readOnly = true)
+    public List<ExpenseDTO> getExpensesForUserOnDate(Long profileId, LocalDate date) {
+        List<ExpenseEntity> list = expenseRepository.findByProfileIdAndDate(profileId, date);
+        return list.stream()
+                .map(this::toDTO)
+                .toList();
+    }
+
+    //Convert DTO to Entity and vice versa
     private ExpenseEntity toEntity(ExpenseDTO expenseDto, ProfileEntity profile, CategoryEntity category) {
         if (expenseDto == null) {
             return null;
@@ -102,6 +117,7 @@ public class ExpenseService {
                 .build();
     }
 
+    // Convert ExpenseEntity to DTO
     private ExpenseDTO toDTO(ExpenseEntity expenseEntity) {
 
         // Convert ExpenseEntity to ExpenseDTO
