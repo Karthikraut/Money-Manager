@@ -1,19 +1,15 @@
-# ✅ Use an official Java 21 runtime image (JRE only, lightweight)
-FROM eclipse-temurin:21-jre
-
-# ✅ Set the working directory inside the container to /app
+# Step 1: Use Maven to build the project
+FROM maven:3.9.6-eclipse-temurin-21 AS build
 WORKDIR /app
+COPY . .
+RUN mvn clean package -DskipTests
 
-# ✅ Copy the jar file from the 'target' folder on your computer
-#    into the container and rename it to moneymanager-v1.jar
-COPY target/moneymanager-0.0.1-SNAPSHOT.jar moneymanager-v1.jar
-
-# ✅ Tell Docker that this application will use port 9090
+# Step 2: Use JRE image to run the built JAR
+FROM eclipse-temurin:21-jre
+WORKDIR /app
+COPY --from=build /app/target/moneymanager-0.0.1-SNAPSHOT.jar moneymanager-v1.jar
 EXPOSE 9090
-
-# ✅ When the container starts, run the jar file using Java
-ENTRYPOINT ["java","-jar","moneymanager-v1.jar"]
-
+ENTRYPOINT ["java", "-jar", "moneymanager-v1.jar"]
 
 
 # Here’s the **detailed explanation** of your Dockerfile and a **commented version** so you can understand it easily:
