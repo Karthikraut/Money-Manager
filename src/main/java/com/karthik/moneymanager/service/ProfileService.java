@@ -1,9 +1,9 @@
 package com.karthik.moneymanager.service;
 
-
 import java.util.Map;
 import java.util.UUID;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -31,18 +31,18 @@ public class ProfileService {
     private final AuthenticationManager authenticationManager;
     private final Jwtutil jwtutil;
 
-   
+    @Value("${app.activation.url}")
+    private String activationUrl;
 
     // ✅ registerUser method
     public ProfileDTO registerUser(ProfileDTO profileDTO) {
-       
+
         ProfileEntity newProfile = toEntity(profileDTO);
         newProfile.setActivationToken(UUID.randomUUID().toString());
-        
 
         newProfile = profileRepository.save(newProfile);
-        //SEND ACTIVATION EMAIL
-        String activationLink = "http://localhost:8080/api/v1/activate?token=" + newProfile.getActivationToken();
+        // SEND ACTIVATION EMAIL
+        String activationLink =  activationUrl+"/api/v1/activate?token="+ newProfile.getActivationToken();
         String subject = "Activate your Money Manager account";
         String body = "Click the link to activate your account: " + activationLink;
 
@@ -78,14 +78,13 @@ public class ProfileService {
     public boolean activateProfile(String activationToken) {
         return profileRepository.findByActivationToken(activationToken)
                 .map(
-                    profile->{
-                        profile.setIsActive(true);
-                        profile.setActivationToken(null); // Clear the token after activation
-                        profileRepository.save(profile);
-                        return true;
-                    }
-                )
-                    .orElse(false);
+                        profile -> {
+                            profile.setIsActive(true);
+                            profile.setActivationToken(null); // Clear the token after activation
+                            profileRepository.save(profile);
+                            return true;
+                        })
+                .orElse(false);
     }
 
     public boolean isAccountActive(String email) {
@@ -93,8 +92,8 @@ public class ProfileService {
                 .map(ProfileEntity::getIsActive)
                 .orElse(false);
     }
-    
-    public ProfileEntity getCurrentProfile(){
+
+    public ProfileEntity getCurrentProfile() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String email = authentication.getName();
         return profileRepository.findByEmail(email)
@@ -103,13 +102,13 @@ public class ProfileService {
 
     public ProfileDTO getPublicProfile(String email) {
         ProfileEntity currentUser = null;
-        if(email==null){
+        if (email == null) {
             currentUser = getCurrentProfile();
         } else {
             currentUser = profileRepository.findByEmail(email)
                     .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + email));
         }
-        
+
         return ProfileDTO.builder()
                 .id(currentUser.getId())
                 .fullName(currentUser.getFullName())
@@ -122,12 +121,12 @@ public class ProfileService {
 
     public Map<String, Object> authenticateAndGenerateToken(AuthDto authDto) {
         try {
-            authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(authDto.getEmail(),authDto.getPassword()));
+            authenticationManager
+                    .authenticate(new UsernamePasswordAuthenticationToken(authDto.getEmail(), authDto.getPassword()));
             String token = jwtutil.generateToken(authDto.getEmail());
             return Map.of(
-                "token", token,
-                "user", getPublicProfile(authDto.getEmail())
-            );
+                    "token", token,
+                    "user", getPublicProfile(authDto.getEmail()));
         } catch (Exception e) {
             // TODO: handle exception
             throw new RuntimeException("Invalide email or Password");
